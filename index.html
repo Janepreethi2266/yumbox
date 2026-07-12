@@ -1,0 +1,1505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>YumBox — Food Ordering App</title>
+<style>
+  /* ============================================================
+     DESIGN TOKENS (light theme = default, dark theme overrides
+     everything through [data-theme="dark"] on the .phone shell)
+     ============================================================ */
+  :root{
+    --mango: #FF9F1C;
+    --mango-dark: #E6870A;
+    --chili: #E8492A;
+    --basil: #4C9A6A;
+    --gold: #F4B400;
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --font-display: 'Fredoka', 'Segoe UI', sans-serif;
+    --font-body: 'Inter', 'Segoe UI', sans-serif;
+  }
+  .phone{
+    --bg: #FFF8EF;
+    --surface: #FFFFFF;
+    --surface-2: #F5EBDD;
+    --shell: #211C1A;
+    --shell-2: #342C29;
+    --text: #241E1B;
+    --text-soft: #8A8078;
+    --border: #EEE3D6;
+    --shadow: 0 10px 24px rgba(33,28,26,0.10);
+  }
+  .phone[data-theme="dark"]{
+    --bg: #15100D;
+    --surface: #211A16;
+    --surface-2: #2A211C;
+    --shell: #0F0B09;
+    --shell-2: #1E1713;
+    --text: #F5ECE3;
+    --text-soft: #A99C90;
+    --border: #362C25;
+    --shadow: 0 10px 24px rgba(0,0,0,0.35);
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  body{
+    font-family: var(--font-body);
+    background: linear-gradient(180deg,#171310 0%,#0F0D0B 100%);
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:24px 12px;
+  }
+
+  /* ============ PHONE SHELL ============ */
+  .phone{
+    width:100%; max-width:430px; height:880px; max-height:94vh;
+    background: var(--bg); color: var(--text);
+    border-radius:38px; overflow:hidden; position:relative;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.45), 0 0 0 10px #0c0a09;
+    display:flex; flex-direction:column;
+    transition: background 0.3s ease, color 0.3s ease;
+  }
+  .notch{ height:26px; background: var(--shell); flex-shrink:0; }
+
+  /* ============ HEADER ============ */
+  .app-header{
+    background: var(--shell); color:#fff;
+    padding: 4px 20px 20px; border-radius: 0 0 26px 26px; flex-shrink:0;
+  }
+  .header-top{ display:flex; align-items:center; justify-content:space-between; }
+  .app-header h1{ font-family: var(--font-display); font-size:24px; font-weight:700; }
+  .header-icons{ display:flex; gap:10px; align-items:center; }
+  .icon-btn{
+    width:34px; height:34px; border-radius:50%; background: var(--shell-2);
+    border:none; color:#fff; font-size:15px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: background 0.2s ease, transform 0.15s ease;
+    position:relative;
+  }
+  .icon-btn:hover{ background:#3D332F; }
+  .icon-btn:active{ transform: scale(0.9); }
+  .cart-count-dot{
+    position:absolute; top:-4px; right:-4px;
+    background: var(--chili); color:#fff; font-size:9.5px; font-weight:700;
+    width:16px; height:16px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .tagline{ font-size:12px; color:#C9BEB6; margin:4px 0 14px; }
+
+  /* ============================================================
+     SPECIAL OFFERS — auto-scrolling carousel
+     ============================================================ */
+  .offers-wrap{
+    overflow: hidden; margin: 2px 0 14px; -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+  .offers-track{
+    display:flex; gap:12px; width:max-content; padding: 0 20px;
+    animation: offersScroll 22s linear infinite;
+  }
+  .offers-wrap:hover .offers-track,
+  .offers-wrap:active .offers-track{ animation-play-state: paused; }
+  @keyframes offersScroll{
+    from{ transform: translateX(0); }
+    to{ transform: translateX(-50%); }
+  }
+  .offer-card{
+    flex: 0 0 auto; width: 210px; height: 100px; border-radius: 16px;
+    display:flex; align-items:flex-end; color:#fff;
+    position:relative; overflow:hidden; box-shadow: 0 8px 18px rgba(0,0,0,0.22);
+    background-size: cover; background-position: center;
+  }
+  .offer-card::before{
+    content:""; position:absolute; inset:0;
+    background: linear-gradient(0deg, rgba(0,0,0,0.72) 10%, rgba(0,0,0,0.15) 55%, rgba(0,0,0,0.05) 100%);
+  }
+  .offer-card .oc-badge{
+    position:absolute; top:8px; right:8px; font-size:16px; z-index:1;
+    background: rgba(255,255,255,0.22); backdrop-filter: blur(2px); width:26px; height:26px;
+    border-radius:50%; display:flex; align-items:center; justify-content:center;
+  }
+  .offer-card .oc-text{ position:relative; z-index:1; padding: 10px 12px; }
+  .offer-card .oc-title{ font-size:13.5px; font-weight:800; line-height:1.15; }
+  .offer-card .oc-sub{ font-size:10.5px; opacity:0.92; margin-top:2px; }
+
+  .search-wrap{
+    display:flex; align-items:center; background: var(--shell-2);
+    border-radius: var(--radius-md); padding:11px 14px; gap:10px;
+  }
+  .search-wrap svg{ flex-shrink:0; opacity:0.7; }
+  .search-wrap input{
+    background:transparent; border:none; outline:none; color:#fff;
+    font-family: var(--font-body); font-size:14px; width:100%;
+  }
+  .search-wrap input::placeholder{ color:#9C9088; }
+
+  /* ============ CATEGORY PILLS ============ */
+  .categories{
+    display:flex; gap:9px; padding:14px 20px 4px; overflow-x:auto;
+    flex-shrink:0; scrollbar-width:none;
+  }
+  .categories::-webkit-scrollbar{ display:none; }
+  .cat-btn{
+    font-family: var(--font-body); font-weight:600; font-size:12.5px;
+    padding:8px 16px; border-radius:999px; border:1.5px solid var(--border);
+    background: var(--surface); color: var(--text); white-space:nowrap; cursor:pointer;
+    transition: all 0.2s ease;
+  }
+  .cat-btn.active{
+    background: var(--mango); border-color: var(--mango); color:#fff;
+    box-shadow: 0 6px 14px rgba(255,159,28,0.35);
+  }
+  .cat-btn:active{ transform: scale(0.94); }
+
+  /* ============ SCROLLABLE MAIN ============ */
+  .main-scroll{ flex:1; overflow-y:auto; padding:6px 0 110px; }
+  .section-title{
+    font-family: var(--font-display); font-size:15px; font-weight:600;
+    margin: 16px 20px 12px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .section-title span.emoji{ margin-right:5px; }
+
+  /* ---- horizontal scroll rows (Popular / Special / Recommended) ---- */
+  .h-scroll{
+    display:flex; gap:12px; overflow-x:auto; padding:0 20px 6px;
+    scrollbar-width:none;
+  }
+  .h-scroll::-webkit-scrollbar{ display:none; }
+  .h-card{
+    flex: 0 0 140px; background: var(--surface); border-radius: var(--radius-md);
+    padding:8px; box-shadow: var(--shadow); cursor:pointer;
+    transition: transform 0.18s ease;
+  }
+  .h-card:active{ transform: scale(0.95); }
+  .h-card img{ width:100%; height:80px; object-fit:cover; border-radius:10px; }
+  .h-card .name{ font-size:12px; font-weight:600; margin-top:7px; line-height:1.25; }
+  .h-card .price{ font-size:12px; color: var(--chili); font-weight:700; margin-top:3px; }
+  .h-card .rating{ font-size:10.5px; color: var(--text-soft); margin-top:2px; }
+
+  /* ============ FOOD GRID ============ */
+  .food-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; padding: 0 20px; }
+  .food-card{
+    background: var(--surface); border-radius: var(--radius-lg); padding:10px;
+    box-shadow: var(--shadow); display:flex; flex-direction:column;
+    position:relative; transition: transform 0.18s ease; animation: fadeUp 0.35s ease both;
+  }
+  .food-card:active{ transform: scale(0.97); }
+  .food-card .img-wrap{ position:relative; }
+  .food-card img{ width:100%; height:92px; object-fit:cover; border-radius: var(--radius-md); background:#eee; }
+  .fav-btn{
+    position:absolute; top:6px; right:6px; width:26px; height:26px; border-radius:50%;
+    background: rgba(255,255,255,0.9); border:none; font-size:13px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: transform 0.15s ease;
+  }
+  .fav-btn:active{ transform: scale(0.85); }
+  .fav-btn.active{ background:#FFE1E1; }
+  .diet-dot{
+    position:absolute; top:6px; left:6px; width:16px; height:16px; border-radius:4px;
+    background:#fff; border:2px solid var(--basil); display:flex; align-items:center; justify-content:center;
+  }
+  .diet-dot::after{ content:""; width:7px; height:7px; border-radius:50%; background: var(--basil); }
+  .diet-dot.non-veg{ border-color: var(--chili); }
+  .diet-dot.non-veg::after{ background: var(--chili); }
+
+  .food-card .name{ font-weight:600; font-size:13px; margin-top:9px; line-height:1.25; }
+  .food-card .desc{ font-size:10.5px; color: var(--text-soft); margin-top:3px; line-height:1.3; min-height:26px; }
+  .food-card .rating-row{ display:flex; align-items:center; gap:4px; margin-top:5px; font-size:11px; color: var(--gold); font-weight:600; }
+  .food-card .row-bottom{ display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+  .food-card .price{ font-weight:700; color: var(--chili); font-size:14px; }
+  .add-btn{
+    background: var(--mango); color:#fff; border:none; width:30px; height:30px;
+    border-radius:10px; font-size:17px; font-weight:700; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .add-btn:hover{ background: var(--mango-dark); }
+  .add-btn:active{ transform: scale(0.88); }
+  .add-btn.added{ background: var(--basil); }
+
+  .no-results{ grid-column:1/-1; text-align:center; color: var(--text-soft); font-size:13px; padding:30px 10px; }
+
+  @keyframes fadeUp{ from{ opacity:0; transform: translateY(10px);} to{ opacity:1; transform: translateY(0);} }
+
+  /* ============ BOTTOM CART BAR ============ */
+  .cart-bar{
+    position:absolute; left:16px; right:16px; bottom:16px; background: var(--shell);
+    border-radius: var(--radius-lg); padding:14px 18px; display:flex; align-items:center;
+    justify-content:space-between; box-shadow:0 14px 28px rgba(0,0,0,0.35); cursor:pointer;
+    transition: transform 0.2s ease; z-index:20;
+  }
+  .cart-bar.hidden{ display:none; }
+  .cart-bar:active{ transform: scale(0.98); }
+  .cart-bar .cart-left{ display:flex; align-items:center; gap:10px; color:#fff; }
+  .cart-badge{
+    background: var(--mango); color:#fff; font-weight:700; font-size:12px;
+    width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  }
+  .cart-left .label{ font-size:12.5px; color:#C9BEB6; }
+  .cart-left .total{ font-size:15px; font-weight:700; }
+  .cart-bar .view-btn{ color: var(--mango); font-weight:600; font-size:13px; }
+
+  /* ============ GENERIC OVERLAY (used by drawer / checkout / success) ============ */
+  .overlay{
+    position:absolute; inset:0; background: rgba(15,12,10,0.55); opacity:0; pointer-events:none;
+    transition: opacity 0.25s ease; z-index:30;
+  }
+  .overlay.open{ opacity:1; pointer-events:auto; }
+
+  /* ============ CART DRAWER ============ */
+  .drawer{
+    position:absolute; left:0; right:0; bottom:0; background: var(--bg);
+    border-radius:26px 26px 0 0; max-height:82%; display:flex; flex-direction:column;
+    transform: translateY(100%); transition: transform 0.3s cubic-bezier(.32,.72,0,1); z-index:31;
+  }
+  .drawer.open{ transform: translateY(0); }
+  .drawer-handle{ width:40px; height:4px; background: var(--border); border-radius:4px; margin:10px auto 4px; }
+  .drawer-header{ display:flex; align-items:center; justify-content:space-between; padding:10px 20px 12px; border-bottom:1px solid var(--border); }
+  .drawer-header h2{ font-family: var(--font-display); font-size:18px; }
+  .close-btn{
+    background: var(--surface-2); border:none; width:30px; height:30px; border-radius:50%;
+    font-size:15px; cursor:pointer; color: var(--text);
+  }
+
+  .cart-items{ overflow-y:auto; padding:12px 20px; flex:1; }
+  .cart-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .cart-row img{ width:50px; height:50px; border-radius:12px; object-fit:cover; }
+  .cart-row .info{ flex:1; min-width:0; }
+  .cart-row .info .name{ font-weight:600; font-size:13px; }
+  .cart-row .info .price{ font-size:12px; color: var(--text-soft); margin-top:2px; }
+  .qty-control{ display:flex; align-items:center; gap:7px; background: var(--surface); border-radius:999px; padding:4px 7px; border:1px solid var(--border); }
+  .qty-control button{
+    width:21px; height:21px; border-radius:50%; border:none; background: var(--mango); color:#fff;
+    font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .qty-control button.minus{ background: var(--surface-2); color: var(--text); }
+  .qty-control .qty-num{ font-size:12.5px; font-weight:600; min-width:12px; text-align:center; }
+  .remove-btn{ background:none; border:none; color: var(--chili); font-size:11px; font-weight:600; margin-left:4px; cursor:pointer; }
+  .empty-cart{ text-align:center; padding:50px 20px; color: var(--text-soft); font-size:13.5px; }
+
+  .drawer-footer{ padding:14px 20px 22px; border-top:1px solid var(--border); background: var(--bg); }
+  .summary-row{ display:flex; justify-content:space-between; font-size:13px; color: var(--text-soft); margin-bottom:6px; }
+  .summary-row.total{ font-size:15.5px; font-weight:700; color: var(--text); margin-top:8px; }
+  .checkout-btn{
+    width:100%; margin-top:14px; padding:15px; border:none; border-radius: var(--radius-md);
+    background: var(--chili); color:#fff; font-family: var(--font-display); font-size:15px; font-weight:600;
+    cursor:pointer; transition: transform 0.15s ease, background 0.2s ease;
+  }
+  .checkout-btn:hover{ background:#D13D20; }
+  .checkout-btn:active{ transform: scale(0.97); }
+  .checkout-btn:disabled{ background: var(--surface-2); color: var(--text-soft); cursor:not-allowed; }
+
+  /* ============ CHECKOUT FORM POPUP ============ */
+  .form-card{
+    background: var(--surface); border-radius: var(--radius-lg); padding:26px 22px;
+    width:84%; max-height:80%; overflow-y:auto; transform: scale(0.9); opacity:0;
+    transition: transform 0.3s cubic-bezier(.32,.72,0,1), opacity 0.3s ease;
+  }
+  .overlay.open .form-card{ transform: scale(1); opacity:1; }
+  .form-card h3{ font-family: var(--font-display); font-size:17px; margin-bottom:4px; }
+  .form-card .sub{ font-size:12px; color: var(--text-soft); margin-bottom:16px; }
+  .field{ margin-bottom:14px; }
+  .field label{ font-size:12px; font-weight:600; display:block; margin-bottom:6px; }
+  .field input, .field textarea{
+    width:100%; padding:11px 13px; border-radius: var(--radius-sm); border:1.5px solid var(--border);
+    background: var(--bg); color: var(--text); font-family: var(--font-body); font-size:13.5px; outline:none;
+    transition: border-color 0.2s ease;
+  }
+  .field input:focus, .field textarea:focus{ border-color: var(--mango); }
+  .field textarea{ resize:none; height:60px; }
+  .field .err{ font-size:10.5px; color: var(--chili); margin-top:4px; display:none; }
+  .field.invalid input, .field.invalid textarea{ border-color: var(--chili); }
+  .field.invalid .err{ display:block; }
+  .order-total-line{
+    display:flex; justify-content:space-between; font-size:14px; font-weight:700;
+    padding:12px 0; border-top:1px dashed var(--border); margin-bottom:6px;
+  }
+  .form-buttons{ display:flex; gap:10px; margin-top:8px; }
+  .btn-secondary{
+    flex:1; padding:13px; border-radius: var(--radius-md); border:1.5px solid var(--border);
+    background:transparent; color: var(--text); font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .btn-primary{
+    flex:1.4; padding:13px; border-radius: var(--radius-md); border:none;
+    background: var(--mango); color:#fff; font-weight:600; font-size:13px; cursor:pointer;
+    transition: background 0.2s ease, transform 0.15s ease;
+  }
+  .btn-primary:hover{ background: var(--mango-dark); }
+  .btn-primary:active{ transform: scale(0.97); }
+
+  /* ============ SUCCESS POPUP ============ */
+  .popup-card{
+    background: var(--surface); border-radius: var(--radius-lg); padding:34px 28px; text-align:center;
+    width:82%; transform: scale(0.85); transition: transform 0.3s cubic-bezier(.32,.72,0,1);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+  }
+  .overlay.open .popup-card{ transform: scale(1); }
+  .popup-icon{
+    width:64px; height:64px; border-radius:50%; background: var(--basil); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:30px; margin:0 auto 16px;
+    animation: pop 0.4s cubic-bezier(.32,.72,0,1);
+  }
+  @keyframes pop{ 0%{ transform: scale(0);} 70%{ transform: scale(1.15);} 100%{ transform: scale(1);} }
+  .popup-card h3{ font-family: var(--font-display); font-size:17px; margin-bottom:6px; }
+  .popup-card p{ font-size:13px; color: var(--text-soft); margin-bottom:20px; }
+  .popup-card button{
+    background: var(--mango); color:#fff; border:none; padding:11px 26px; border-radius: var(--radius-md);
+    font-weight:600; font-size:13.5px; cursor:pointer;
+  }
+
+  /* ============================================================
+     GROUP ORDERING — banner, member switcher, overlay, split UI
+     ============================================================ */
+  .group-banner{
+    margin:12px 20px 0; background: linear-gradient(120deg, var(--mango), var(--chili));
+    border-radius: var(--radius-md); padding:11px 14px; display:flex; align-items:center;
+    justify-content:space-between; cursor:pointer; box-shadow:0 8px 18px rgba(232,73,42,0.25);
+    animation: fadeUp 0.3s ease both;
+  }
+  .group-banner.hidden{ display:none; }
+  .group-banner .gb-left{ display:flex; align-items:center; gap:9px; min-width:0; }
+  .group-banner .gb-text{ color:#fff; min-width:0; }
+  .group-banner .gb-title{ font-size:12.5px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .group-banner .gb-sub{ font-size:10.5px; color:rgba(255,255,255,0.85); }
+  .avatar-stack{ display:flex; flex-shrink:0; }
+  .avatar-chip{
+    width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-size:13px; border:2px solid #fff; margin-left:-8px; box-shadow:0 2px 4px rgba(0,0,0,0.15);
+  }
+  .avatar-chip:first-child{ margin-left:0; }
+  .group-banner .gb-arrow{ color:#fff; font-size:16px; flex-shrink:0; margin-left:8px; }
+
+  .orderer-bar{
+    display:flex; gap:8px; padding:10px 20px 2px; overflow-x:auto; scrollbar-width:none; flex-shrink:0;
+    align-items:center;
+  }
+  .orderer-bar::-webkit-scrollbar{ display:none; }
+  .orderer-bar .oa-label{ font-size:10.5px; color: var(--text-soft); white-space:nowrap; margin-right:2px; }
+  .orderer-chip{
+    display:flex; align-items:center; gap:5px; padding:6px 12px 6px 6px; border-radius:999px;
+    border:1.5px solid var(--border); background: var(--surface); cursor:pointer; white-space:nowrap;
+    font-size:11.5px; font-weight:600; color: var(--text); transition: all 0.2s ease;
+  }
+  .orderer-chip .dot{ width:20px; height:20px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; }
+  .orderer-chip.active{ border-color: var(--mango); background: rgba(255,159,28,0.12); }
+
+  /* ---- Group setup / manage overlay ---- */
+  .group-card{
+    background: var(--surface); border-radius: var(--radius-lg); padding:24px 22px;
+    width:86%; max-height:84%; overflow-y:auto; transform: scale(0.9); opacity:0;
+    transition: transform 0.3s cubic-bezier(.32,.72,0,1), opacity 0.3s ease;
+  }
+  .overlay.open .group-card{ transform: scale(1); opacity:1; }
+  .group-card h3{ font-family: var(--font-display); font-size:17px; margin-bottom:4px; }
+  .group-card .sub{ font-size:12px; color: var(--text-soft); margin-bottom:16px; }
+  .group-emoji-hero{ font-size:38px; text-align:center; margin-bottom:6px; }
+  .link-row{
+    display:flex; align-items:center; gap:8px; background: var(--surface-2); border:1.5px dashed var(--border);
+    border-radius: var(--radius-sm); padding:10px 12px; margin-bottom:16px;
+  }
+  .link-row .link-text{ flex:1; font-size:11.5px; color: var(--text-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .copy-btn{
+    background: var(--mango); color:#fff; border:none; border-radius:8px; padding:7px 12px;
+    font-size:11px; font-weight:700; cursor:pointer; flex-shrink:0; transition: background 0.2s ease;
+  }
+  .copy-btn.copied{ background: var(--basil); }
+  .members-list{ margin-bottom:16px; }
+  .members-list .ml-title{ font-size:11.5px; font-weight:700; color: var(--text-soft); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.3px; }
+  .member-row{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); }
+  .member-row:last-child{ border-bottom:none; }
+  .member-avatar{ width:34px; height:34px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+  .member-row .m-name{ font-size:13px; font-weight:600; flex:1; }
+  .member-row .m-host{ font-size:9.5px; background: var(--surface-2); color: var(--text-soft); padding:2px 7px; border-radius:999px; font-weight:700; }
+  .member-row .m-total{ font-size:12px; font-weight:700; color: var(--chili); }
+  .add-friend-btn{
+    width:100%; padding:11px; border-radius: var(--radius-md); border:1.5px dashed var(--border);
+    background:transparent; color: var(--text); font-weight:600; font-size:12.5px; cursor:pointer; margin-bottom:8px;
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .add-friend-btn:hover{ border-color: var(--mango); color: var(--mango); }
+  .group-name-input{
+    width:100%; padding:12px 14px; border-radius: var(--radius-sm); border:1.5px solid var(--border);
+    background: var(--bg); color: var(--text); font-family: var(--font-body); font-size:14px; outline:none;
+    margin-bottom:14px; transition: border-color 0.2s ease;
+  }
+  .group-name-input:focus{ border-color: var(--mango); }
+  .end-group-btn{ background:none; border:none; color: var(--chili); font-size:12px; font-weight:600; cursor:pointer; width:100%; padding:8px; margin-top:4px; }
+
+  /* ---- Split summary inside cart drawer ---- */
+  .split-toggle{ display:flex; gap:8px; padding:2px 0 12px; }
+  .split-toggle button{
+    flex:1; padding:8px; border-radius:999px; border:1.5px solid var(--border); background: var(--surface);
+    color: var(--text); font-size:11.5px; font-weight:700; cursor:pointer; transition: all 0.2s ease;
+  }
+  .split-toggle button.active{ background: var(--shell); border-color: var(--shell); color:#fff; }
+  .split-member-block{ margin-bottom:14px; }
+  .split-member-head{ display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+  .split-member-head .sm-name{ font-size:12.5px; font-weight:700; flex:1; }
+  .split-member-head .sm-amt{ font-size:12.5px; font-weight:700; color: var(--chili); }
+  .split-item-line{ display:flex; justify-content:space-between; font-size:11.5px; color: var(--text-soft); padding:2px 0 2px 30px; }
+  .cart-row .added-by{ font-size:10px; color: var(--text-soft); margin-top:2px; display:flex; align-items:center; gap:3px; }
+
+  /* ---- toast ---- */
+  .toast{
+    position:absolute; top:14px; left:50%; transform: translateX(-50%) translateY(-20px); z-index:50;
+    background: var(--shell); color:#fff; padding:10px 16px; border-radius:999px; font-size:12px; font-weight:600;
+    box-shadow:0 10px 22px rgba(0,0,0,0.3); opacity:0; pointer-events:none; transition: all 0.3s cubic-bezier(.32,.72,0,1);
+    display:flex; align-items:center; gap:7px; white-space:nowrap;
+  }
+  .toast.show{ opacity:1; transform: translateX(-50%) translateY(0); }
+
+  /* ============================================================
+     NEARBY SHOPS — map + shop list
+     ============================================================ */
+  .shops-card{
+    background: var(--surface); border-radius: var(--radius-lg); padding:20px 18px;
+    width:90%; max-height:86%; overflow-y:auto; transform: scale(0.9); opacity:0;
+    transition: transform 0.3s cubic-bezier(.32,.72,0,1), opacity 0.3s ease;
+  }
+  .overlay.open .shops-card{ transform: scale(1); opacity:1; }
+  .shops-card h3{ font-family: var(--font-display); font-size:17px; margin-bottom:2px; }
+  .shops-card .sub{ font-size:12px; color: var(--text-soft); margin-bottom:12px; }
+  .shops-map-wrap{ position:relative; border-radius: var(--radius-md); overflow:hidden; margin-bottom:14px; box-shadow:0 6px 16px rgba(0,0,0,0.15); background: var(--surface-2); }
+  .shops-map-wrap iframe{ width:100%; height:220px; display:block; border:0; }
+  .map-pin{
+    position:absolute; width:26px; height:26px; border-radius:50% 50% 50% 0; transform: translate(-50%, -100%) rotate(-45deg);
+    background: var(--chili); border:2px solid #fff; box-shadow:0 3px 6px rgba(0,0,0,0.3);
+    display:flex; align-items:center; justify-content:center; z-index:2;
+  }
+  .map-pin span{ transform: rotate(45deg); color:#fff; font-size:11px; font-weight:800; }
+  .map-pin.you{ background: var(--shell); }
+  .shops-map-badge{
+    position:absolute; top:10px; left:10px; background: rgba(20,16,14,0.75); color:#fff;
+    font-size:10.5px; font-weight:700; padding:5px 10px; border-radius:999px; display:flex; align-items:center; gap:5px;
+    z-index:3;
+  }
+  .shop-row{ display:flex; align-items:center; gap:11px; padding:10px 0; border-bottom:1px solid var(--border); }
+  .shop-row:last-child{ border-bottom:none; }
+  .shop-pin{
+    width:30px; height:30px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    font-size:13px; font-weight:800; color:#fff; background: var(--chili);
+  }
+  .shop-row .sr-info{ flex:1; min-width:0; }
+  .shop-row .sr-name{ font-size:13.5px; font-weight:700; }
+  .shop-row .sr-meta{ font-size:11px; color: var(--text-soft); margin-top:1px; }
+  .shop-row .sr-rating{ font-size:12px; font-weight:700; color:#fff; background: var(--basil); padding:3px 8px; border-radius:8px; flex-shrink:0; white-space:nowrap; }
+
+  @media (max-width:380px){
+    .phone{ border-radius:0; height:100vh; max-height:100vh; }
+    body{ padding:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone" data-theme="light">
+  <div class="notch"></div>
+
+  <!-- ============ HEADER: title + theme toggle + cart icon + search ============ -->
+  <header class="app-header">
+    <div class="header-top">
+      <h1>YumBox</h1>
+      <div class="header-icons">
+        <button class="icon-btn" id="groupIconBtn" title="Group Order">
+          👨‍👩‍👧‍👦<span class="cart-count-dot" id="groupMemberCount" style="display:none">0</span>
+        </button>
+        <button class="icon-btn" id="shopsIconBtn" title="Shops Near You">📍</button>
+        <button class="icon-btn" id="themeToggle" title="Toggle dark mode">🌙</button>
+        <button class="icon-btn" id="cartIconBtn" title="View cart">
+          🛒<span class="cart-count-dot" id="headerCartCount" style="display:none">0</span>
+        </button>
+      </div>
+    </div>
+    <p class="tagline" id="tagline">Craving something delicious? We've got it.</p>
+
+  <!-- ============ SPECIAL OFFERS (auto-scrolling carousel) ============ -->
+  <div class="offers-wrap">
+    <div class="offers-track" id="offersTrack"></div>
+  </div>
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="searchInput" placeholder="Search for dishes...">
+    </div>
+  </header>
+
+  <!-- ============ GROUP ORDER BANNER (visible only while a group is active) ============ -->
+  <div class="group-banner hidden" id="groupBanner">
+    <div class="gb-left">
+      <div class="avatar-stack" id="bannerAvatars"></div>
+      <div class="gb-text">
+        <div class="gb-title" id="bannerTitle">Group order</div>
+        <div class="gb-sub" id="bannerSub">Tap to manage</div>
+      </div>
+    </div>
+    <div class="gb-arrow">→</div>
+  </div>
+
+  <!-- ============ "ORDERING AS" MEMBER SWITCHER (group mode only) ============ -->
+  <div class="orderer-bar hidden" id="ordererBar"></div>
+
+  <!-- ============ CATEGORY FILTER PILLS ============ -->
+  <nav class="categories" id="categoryBar"></nav>
+
+  <!-- ============ MAIN SCROLLABLE CONTENT ============ -->
+  <main class="main-scroll" id="mainScroll">
+    <div id="curatedSections"></div>
+    <div class="section-title"><span><span class="emoji">🍽️</span>All Dishes</span></div>
+    <div class="food-grid" id="foodGrid"></div>
+  </main>
+
+  <!-- ============ BOTTOM CART SUMMARY BAR ============ -->
+  <div class="cart-bar hidden" id="cartBar">
+    <div class="cart-left">
+      <div class="cart-badge" id="cartBadge">0</div>
+      <div><div class="label">Total</div><div class="total" id="cartBarTotal">₹0</div></div>
+    </div>
+    <div class="view-btn">View Cart →</div>
+  </div>
+
+  <!-- ============ CART DRAWER ============ -->
+  <div class="overlay" id="drawerOverlay"></div>
+  <div class="drawer" id="drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-header"><h2 id="drawerTitle">Your Cart</h2><button class="close-btn" id="closeDrawer">✕</button></div>
+    <div class="split-toggle hidden" id="splitToggle">
+      <button data-view="items" class="active">All Items</button>
+      <button data-view="split">Split by Person</button>
+    </div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="drawer-footer">
+      <div class="summary-row"><span>Subtotal</span><span id="subtotalVal">₹0</span></div>
+      <div class="summary-row"><span>Delivery Fee</span><span id="deliveryVal">₹0</span></div>
+      <div class="summary-row total"><span>Total</span><span id="totalVal">₹0</span></div>
+      <button class="checkout-btn" id="checkoutBtn" disabled>Checkout</button>
+    </div>
+  </div>
+
+  <!-- ============ CHECKOUT FORM POPUP ============ -->
+  <div class="overlay" id="formOverlay">
+    <div class="form-card">
+      <h3>Order Summary</h3>
+      <p class="sub">Enter your delivery details to place the order.</p>
+
+      <div class="field" id="nameField">
+        <label>Customer Name</label>
+        <input type="text" id="custName" placeholder="e.g. Priya Sharma">
+        <div class="err">Please enter your name.</div>
+      </div>
+      <div class="field" id="phoneField">
+        <label>Phone Number</label>
+        <input type="tel" id="custPhone" placeholder="e.g. 9876543210">
+        <div class="err">Please enter a valid 10-digit phone number.</div>
+      </div>
+      <div class="field" id="addressField">
+        <label>Delivery Address</label>
+        <textarea id="custAddress" placeholder="House no, street, city, pincode"></textarea>
+        <div class="err">Please enter your delivery address.</div>
+      </div>
+
+      <div class="order-total-line"><span>Order Total</span><span id="formTotal">₹0</span></div>
+
+      <div class="form-buttons">
+        <button class="btn-secondary" id="cancelOrderBtn">Cancel</button>
+        <button class="btn-primary" id="confirmOrderBtn">Confirm Order</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SUCCESS POPUP ============ -->
+  <div class="overlay" id="popupOverlay">
+    <div class="popup-card">
+      <div class="popup-icon" id="popupIcon">✓</div>
+      <h3 id="popupTitle">Order placed successfully!</h3>
+      <p id="popupSub">Thank you for ordering.</p>
+      <div id="popupSplitBreakdown"></div>
+      <button id="popupCloseBtn">Continue</button>
+    </div>
+  </div>
+
+  <!-- ============ GROUP ORDER OVERLAY (create / manage) ============ -->
+  <div class="overlay" id="groupOverlay">
+    <div class="group-card" id="groupCardContent"></div>
+  </div>
+
+  <!-- ============ NEARBY SHOPS OVERLAY (map + ratings) ============ -->
+  <div class="overlay" id="shopsOverlay">
+    <div class="shops-card" id="shopsCardContent"></div>
+  </div>
+
+  <!-- ============ TOAST (group activity notifications) ============ -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ======================================================
+   FOOD DATA — 40+ items across all requested categories.
+   diet: "veg" | "non-veg"  (used by the Vegetarian / Non-Vegetarian filters)
+   tags: any of "popular" | "special" | "recommended"
+   ====================================================== */
+const FOOD_ITEMS = [
+  { id:1,  name:"Chicken Biryani",     desc:"Fragrant basmati rice layered with spiced chicken", price:249, rating:4.5, category:"Biryani", diet:"non-veg", tags:["popular"],
+    img:"https://images.unsplash.com/photo-1559528896-c5310744cce8?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:2,  name:"Mutton Biryani",      desc:"Slow-cooked mutton with aromatic rice and spices",   price:329, rating:4.6, category:"Biryani", diet:"non-veg", tags:["special"],
+    img:"https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:3,  name:"Egg Biryani",         desc:"Boiled eggs tossed in spiced biryani rice",           price:199, rating:4.2, category:"Biryani", diet:"non-veg", tags:[],
+    img:"https://images.unsplash.com/photo-1697155406055-2db32d47ca07?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:4,  name:"Veg Biryani",         desc:"Mixed vegetables cooked with fragrant basmati rice",  price:179, rating:4.1, category:"Biryani", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1630851840633-f96999247032?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:5,  name:"Paneer Biryani",      desc:"Soft paneer cubes in richly spiced rice",             price:219, rating:4.3, category:"Biryani", diet:"veg", tags:["recommended"],
+    img:"https://images.unsplash.com/photo-1599043513900-ed6fe01d3833?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:6,  name:"Fish Biryani",        desc:"Coastal-style fish biryani with tangy spices",        price:269, rating:4.4, category:"Biryani", diet:"non-veg", tags:[],
+    img:"https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:7,  name:"Margherita Pizza",    desc:"Classic cheese and tomato on a thin crust",           price:249, rating:4.4, category:"Pizza", diet:"veg", tags:["popular"],
+    img:"https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:8,  name:"Veg Pizza",           desc:"Loaded with fresh garden vegetables",                 price:229, rating:4.2, category:"Pizza", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:9,  name:"Chicken Pizza",       desc:"Grilled chicken chunks with mozzarella",              price:299, rating:4.5, category:"Pizza", diet:"non-veg", tags:[],
+    img:"https://images.unsplash.com/photo-1594007654729-407eedc4be65?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:10, name:"Pepperoni Pizza",     desc:"Loaded with spicy pepperoni and cheese",              price:329, rating:4.6, category:"Pizza", diet:"non-veg", tags:["special"],
+    img:"https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:11, name:"Veg Burger",          desc:"Crispy veg patty with lettuce and sauces",            price:129, rating:4.0, category:"Burger", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:12, name:"Chicken Burger",      desc:"Juicy grilled chicken patty burger",                  price:179, rating:4.3, category:"Burger", diet:"non-veg", tags:["popular"],
+    img:"https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:13, name:"Cheese Burger",       desc:"Double cheese melt with a soft bun",                  price:159, rating:4.2, category:"Burger", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:14, name:"Fried Rice",          desc:"Wok-tossed rice with veggies and soy sauce",          price:159, rating:4.1, category:"Fried Rice", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:15, name:"Chicken Fried Rice",  desc:"Fried rice tossed with tender chicken bits",          price:199, rating:4.3, category:"Fried Rice", diet:"non-veg", tags:["popular"],
+    img:"https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:16, name:"Veg Noodles",         desc:"Stir-fried noodles with crunchy vegetables",          price:149, rating:4.0, category:"Noodles", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1555126634-323283e090fa?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:17, name:"Chicken Noodles",     desc:"Hakka-style noodles with shredded chicken",           price:189, rating:4.2, category:"Noodles", diet:"non-veg", tags:[],
+    img:"https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:18, name:"Manchurian",          desc:"Deep-fried veg balls tossed in tangy sauce",          price:169, rating:4.1, category:"Chinese", diet:"veg", tags:["special"],
+    img:"https://images.unsplash.com/photo-1603133872878-684f208fb84b?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:19, name:"Idli",                desc:"Steamed rice cakes served with chutney",              price:79,  rating:4.3, category:"South Indian", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1741376509047-66dae5df90f9?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:20, name:"Dosa",                desc:"Crispy rice crepe served with sambar",                price:99,  rating:4.5, category:"South Indian", diet:"veg", tags:["popular"],
+    img:"https://images.unsplash.com/photo-1743517894265-c86ab035adef?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:21, name:"Masala Dosa",         desc:"Crispy dosa filled with spiced potato masala",        price:119, rating:4.6, category:"South Indian", diet:"veg", tags:["recommended"],
+    img:"https://images.unsplash.com/photo-1743615467204-8fdaa85ff2db?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:22, name:"Pongal",              desc:"Comforting rice and lentil porridge with ghee",       price:89,  rating:4.0, category:"South Indian", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1657196118354-f25f29fe636d?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:23, name:"Poori",               desc:"Fluffy deep-fried bread with potato curry",           price:89,  rating:4.1, category:"South Indian", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1567337710282-00832b415979?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:24, name:"Butter Chicken",      desc:"Creamy tomato gravy with tender chicken",             price:279, rating:4.7, category:"North Indian", diet:"non-veg", tags:["special"],
+    img:"https://images.unsplash.com/photo-1542367592-8849eb950fd8?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:25, name:"Paneer Butter Masala",desc:"Paneer cubes in a rich buttery tomato gravy",         price:229, rating:4.5, category:"North Indian", diet:"veg", tags:["recommended"],
+    img:"https://images.unsplash.com/photo-1517244683847-7456b63c5969?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:26, name:"Dal Makhani",         desc:"Slow-cooked black lentils in creamy butter gravy",    price:189, rating:4.2, category:"North Indian", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1596797038530-2c107229654b?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:27, name:"Chicken Tikka",       desc:"Char-grilled marinated chicken skewers",              price:219, rating:4.4, category:"Snacks", diet:"non-veg", tags:[],
+    img:"https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:28, name:"Samosa",              desc:"Crispy pastry filled with spiced potatoes",           price:49,  rating:4.0, category:"Snacks", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1572099107898-46f22b3af4f9?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:29, name:"Veg Sandwich",        desc:"Grilled bread with fresh veggies and chutney",        price:99,  rating:4.0, category:"Sandwich", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1586190848861-99aa4a171e90?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:30, name:"Chicken Sandwich",    desc:"Grilled sandwich with shredded chicken filling",      price:139, rating:4.2, category:"Sandwich", diet:"non-veg", tags:[],
+    img:"https://images.unsplash.com/photo-1603064752734-4c48eff53d05?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:31, name:"Paneer Roll",         desc:"Soft flatbread rolled with spiced paneer",            price:129, rating:4.1, category:"Rolls", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1610440042657-612c34d95e9f?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:32, name:"Chicken Roll",        desc:"Flatbread rolled with spiced grilled chicken",        price:149, rating:4.3, category:"Rolls", diet:"non-veg", tags:["popular"],
+    img:"https://images.unsplash.com/photo-1607013251379-e6eecfffe234?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:33, name:"Gulab Jamun",         desc:"Soft milk dumplings soaked in sugar syrup",           price:79,  rating:4.5, category:"Desserts", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1666190092159-3171cf0fbb12?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:34, name:"Brownie",             desc:"Fudgy chocolate brownie, served warm",                price:99,  rating:4.4, category:"Desserts", diet:"veg", tags:["recommended"],
+    img:"https://images.unsplash.com/photo-1636743715220-d8f8dd900b87?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:35, name:"Rasmalai",            desc:"Soft paneer discs soaked in sweet saffron milk",      price:99,  rating:4.4, category:"Desserts", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1601050690597-df0568f70950?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:36, name:"Chocolate Cake",      desc:"Rich, moist layered chocolate cake",                  price:149, rating:4.6, category:"Cakes", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1636743715220-d8f8dd900b87?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:37, name:"Vanilla Ice Cream",   desc:"Classic creamy vanilla scoop",                        price:89,  rating:4.3, category:"Ice Cream", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1560008581-09826d1de69e?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:38, name:"Mango Juice",         desc:"Freshly blended sweet mango juice",                   price:69,  rating:4.2, category:"Juices", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1716956755600-4d32af2b8f87?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:39, name:"Orange Juice",        desc:"Freshly squeezed tangy orange juice",                 price:69,  rating:4.1, category:"Juices", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:40, name:"Watermelon Juice",    desc:"Chilled, refreshing watermelon juice",                price:59,  rating:4.0, category:"Juices", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1683166263544-e754e85c3e7c?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:41, name:"Chocolate Milkshake", desc:"Thick and creamy chocolate milkshake",                price:119, rating:4.5, category:"Milkshakes", diet:"veg", tags:["special"],
+    img:"https://images.unsplash.com/photo-1653085315536-1379bc836161?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:42, name:"Oreo Milkshake",      desc:"Blended Oreo cookies with creamy milk",               price:129, rating:4.6, category:"Milkshakes", diet:"veg", tags:["popular"],
+    img:"https://images.unsplash.com/photo-1653085315536-1379bc836161?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:43, name:"Strawberry Milkshake",desc:"Fresh strawberries blended with creamy milk",         price:119, rating:4.3, category:"Milkshakes", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1583024012457-b6de05b7003a?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:44, name:"Cold Coffee",         desc:"Chilled and frothy blended coffee",                   price:99,  rating:4.4, category:"Coffee", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1527156231393-7023794f363c?w=400&h=300&fit=crop&auto=format&q=80" },
+  { id:45, name:"Hot Coffee",          desc:"Freshly brewed hot filter coffee",                    price:69,  rating:4.2, category:"Coffee", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1527156231393-7023794f363c?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:46, name:"Masala Tea",          desc:"Spiced Indian tea brewed with milk",                  price:39,  rating:4.0, category:"Tea", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1683533678036-46ec6a0163d9?w=400&h=300&fit=crop&auto=format&q=80" },
+
+  { id:47, name:"Soft Drink",          desc:"Chilled fizzy soft drink can",                        price:49,  rating:4.0, category:"Soft Drinks", diet:"veg", tags:[],
+    img:"https://images.unsplash.com/photo-1606471191009-63994c53433b?w=400&h=300&fit=crop&auto=format&q=80" }
+];
+
+const CATEGORIES = ["All","Biryani","Pizza","Burger","Fried Rice","Noodles","South Indian","North Indian",
+  "Chinese","Snacks","Sandwich","Rolls","Desserts","Ice Cream","Cakes","Juices","Milkshakes","Coffee","Tea",
+  "Soft Drinks","Vegetarian","Non-Vegetarian"];
+
+const DELIVERY_FEE = 30;
+
+/* ======================================================
+   GROUP ORDERING — mock data
+   ====================================================== */
+const MOCK_FRIENDS = [
+  { name:"Riya",  emoji:"👩" },
+  { name:"Arjun", emoji:"🧔" },
+  { name:"Sara",  emoji:"👧" },
+  { name:"Karan", emoji:"👦" },
+  { name:"Meera", emoji:"👩🏽" }
+];
+const MEMBER_COLORS = ["#FF9F1C","#4C9A6A","#E8492A","#5B8DEF","#B454D9","#F4B400"];
+
+/* ======================================================
+   APP STATE
+   ====================================================== */
+let cart = {};             // { "itemId_memberId": { ...item, qty, memberId } }
+let favorites = new Set(); // item ids marked as favorite
+let activeCategory = "All";
+let searchTerm = "";
+
+let groupActive = false;
+let groupName = "";
+let groupCode = "";
+let groupMembers = [];     // { id, name, emoji, isHost, color }
+let currentOrderer = "you";
+let groupTimer = null;
+let splitView = "items";   // "items" | "split" — toggle inside cart drawer
+
+/* ---------- DOM REFERENCES ---------- */
+const phoneEl        = document.getElementById('phone');
+const themeToggle     = document.getElementById('themeToggle');
+const categoryBar     = document.getElementById('categoryBar');
+const foodGrid        = document.getElementById('foodGrid');
+const curatedSections = document.getElementById('curatedSections');
+const searchInput     = document.getElementById('searchInput');
+const cartBar         = document.getElementById('cartBar');
+const cartBadge       = document.getElementById('cartBadge');
+const cartBarTotal    = document.getElementById('cartBarTotal');
+const headerCartCount = document.getElementById('headerCartCount');
+const cartIconBtn     = document.getElementById('cartIconBtn');
+const drawer          = document.getElementById('drawer');
+const drawerOverlay   = document.getElementById('drawerOverlay');
+const closeDrawerBtn  = document.getElementById('closeDrawer');
+const drawerTitle     = document.getElementById('drawerTitle');
+const splitToggle     = document.getElementById('splitToggle');
+const cartItemsEl     = document.getElementById('cartItems');
+const subtotalVal     = document.getElementById('subtotalVal');
+const deliveryVal     = document.getElementById('deliveryVal');
+const totalVal        = document.getElementById('totalVal');
+const checkoutBtn     = document.getElementById('checkoutBtn');
+const formOverlay     = document.getElementById('formOverlay');
+const formTotal       = document.getElementById('formTotal');
+const custName        = document.getElementById('custName');
+const custPhone       = document.getElementById('custPhone');
+const custAddress     = document.getElementById('custAddress');
+const cancelOrderBtn  = document.getElementById('cancelOrderBtn');
+const confirmOrderBtn = document.getElementById('confirmOrderBtn');
+const popupOverlay    = document.getElementById('popupOverlay');
+const popupCloseBtn   = document.getElementById('popupCloseBtn');
+const popupTitle      = document.getElementById('popupTitle');
+const popupSub        = document.getElementById('popupSub');
+const popupIcon       = document.getElementById('popupIcon');
+const popupSplitBreakdown = document.getElementById('popupSplitBreakdown');
+
+/* ---- group ordering DOM refs ---- */
+const groupIconBtn    = document.getElementById('groupIconBtn');
+const groupMemberCountEl = document.getElementById('groupMemberCount');
+const groupBanner     = document.getElementById('groupBanner');
+const bannerAvatars   = document.getElementById('bannerAvatars');
+const bannerTitle     = document.getElementById('bannerTitle');
+const bannerSub       = document.getElementById('bannerSub');
+const ordererBar      = document.getElementById('ordererBar');
+const groupOverlay    = document.getElementById('groupOverlay');
+const groupCardContent = document.getElementById('groupCardContent');
+const toastEl         = document.getElementById('toast');
+
+/* ---- nearby shops DOM refs ---- */
+const shopsIconBtn    = document.getElementById('shopsIconBtn');
+const shopsOverlay    = document.getElementById('shopsOverlay');
+const shopsCardContent = document.getElementById('shopsCardContent');
+const offersTrack     = document.getElementById('offersTrack');
+
+/* ======================================================
+   RENDER: CATEGORY PILLS
+   ====================================================== */
+function renderCategories(){
+  categoryBar.innerHTML = CATEGORIES.map(cat =>
+    `<button class="cat-btn ${cat === activeCategory ? 'active' : ''}" data-cat="${cat}">${cat}</button>`
+  ).join('');
+}
+
+/* ======================================================
+   RENDER: CURATED HORIZONTAL SECTIONS
+   (Popular Items / Today's Special / Recommended for You)
+   Hidden while the user is actively searching, to keep results focused.
+   ====================================================== */
+function renderCuratedSections(){
+  if(searchTerm.trim() !== ""){
+    curatedSections.innerHTML = "";
+    return;
+  }
+  const sections = [
+    { key:"popular",     title:"Popular Items",        emoji:"🔥" },
+    { key:"special",     title:"Today's Special",      emoji:"✨" },
+    { key:"recommended", title:"Recommended for You",  emoji:"💡" }
+  ];
+  curatedSections.innerHTML = sections.map(sec => {
+    const items = FOOD_ITEMS.filter(f => f.tags.includes(sec.key));
+    if(items.length === 0) return "";
+    return `
+      <div class="section-title"><span><span class="emoji">${sec.emoji}</span>${sec.title}</span></div>
+      <div class="h-scroll">
+        ${items.map(it => `
+          <div class="h-card" data-id="${it.id}">
+            <img src="${it.img}" alt="${it.name}" loading="lazy">
+            <div class="name">${it.name}</div>
+            <div class="price">₹${it.price}</div>
+            <div class="rating">⭐ ${it.rating}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+/* ======================================================
+   RENDER: MAIN FOOD GRID
+   ====================================================== */
+function matchesCategory(item){
+  if(activeCategory === "All") return true;
+  if(activeCategory === "Vegetarian") return item.diet === "veg";
+  if(activeCategory === "Non-Vegetarian") return item.diet === "non-veg";
+  return item.category === activeCategory;
+}
+
+function renderFoodGrid(){
+  const filtered = FOOD_ITEMS.filter(item =>
+    matchesCategory(item) && item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if(filtered.length === 0){
+    foodGrid.innerHTML = `<div class="no-results">No dishes found. Try another search or category 🍽️</div>`;
+    return;
+  }
+
+  foodGrid.innerHTML = filtered.map(item => {
+    const inCart = !!cart[cartKey(item.id, currentOrderer)];
+    const isFav = favorites.has(item.id);
+    return `
+      <div class="food-card">
+        <div class="img-wrap">
+          <img src="${item.img}" alt="${item.name}" loading="lazy">
+          <span class="diet-dot ${item.diet === 'non-veg' ? 'non-veg' : ''}"></span>
+          <button class="fav-btn ${isFav ? 'active' : ''}" data-id="${item.id}">${isFav ? '❤️' : '🤍'}</button>
+        </div>
+        <div class="name">${item.name}</div>
+        <div class="desc">${item.desc}</div>
+        <div class="rating-row">⭐ ${item.rating}</div>
+        <div class="row-bottom">
+          <div class="price">₹${item.price}</div>
+          <button class="add-btn ${inCart ? 'added' : ''}" data-id="${item.id}">${inCart ? '✓' : '+'}</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ======================================================
+   CART LOGIC
+   Cart entries are keyed by "itemId_memberId" so that when a
+   group order is active, the same dish added by two different
+   people is tracked separately (needed for the bill split).
+   Outside of a group, everything is simply added under "you".
+   ====================================================== */
+function cartKey(id, memberId){ return `${id}_${memberId}`; }
+
+function addToCart(id, memberId){
+  const orderer = memberId || currentOrderer;
+  const item = FOOD_ITEMS.find(f => f.id === id);
+  if(!item) return;
+  const key = cartKey(id, orderer);
+  if(cart[key]) cart[key].qty += 1;
+  else cart[key] = { ...item, qty: 1, memberId: orderer };
+  updateAll();
+}
+function changeQty(key, delta){
+  if(!cart[key]) return;
+  cart[key].qty += delta;
+  if(cart[key].qty <= 0) delete cart[key];
+  updateAll();
+}
+function removeFromCart(key){ delete cart[key]; updateAll(); }
+function getCartArray(){ return Object.values(cart); }
+function getMember(memberId){ return groupMembers.find(m => m.id === memberId) || { id:"you", name:"You", emoji:"🧑", color: MEMBER_COLORS[0] }; }
+function getTotals(){
+  const items = getCartArray();
+  const subtotal = items.reduce((s,it) => s + it.price * it.qty, 0);
+  const count = items.reduce((s,it) => s + it.qty, 0);
+  const delivery = subtotal > 0 ? DELIVERY_FEE : 0;
+  return { subtotal, delivery, total: subtotal + delivery, count };
+}
+/* Per-member breakdown for the automatic bill split (used in the
+   cart drawer's "Split" tab and on the final success popup). */
+function getMemberTotals(){
+  const items = getCartArray();
+  const activeMemberIds = groupActive
+    ? [...new Set(items.map(it => it.memberId))].length ? [...new Set(items.map(it => it.memberId))] : ["you"]
+    : ["you"];
+  const { delivery } = getTotals();
+  const perHeadDelivery = activeMemberIds.length > 0 ? delivery / activeMemberIds.length : 0;
+  return activeMemberIds.map(memberId => {
+    const memberItems = items.filter(it => it.memberId === memberId);
+    const itemsTotal = memberItems.reduce((s,it) => s + it.price * it.qty, 0);
+    return {
+      member: getMember(memberId),
+      items: memberItems,
+      itemsTotal,
+      deliveryShare: perHeadDelivery,
+      total: itemsTotal + perHeadDelivery
+    };
+  }).sort((a,b) => b.itemsTotal - a.itemsTotal);
+}
+
+/* ======================================================
+   RENDER: CART BAR + DRAWER
+   ====================================================== */
+function renderCartBar(){
+  const { total, count } = getTotals();
+  if(count === 0){
+    cartBar.classList.add('hidden');
+    headerCartCount.style.display = 'none';
+  } else {
+    cartBar.classList.remove('hidden');
+    cartBadge.textContent = count;
+    cartBarTotal.textContent = `₹${total}`;
+    headerCartCount.style.display = 'flex';
+    headerCartCount.textContent = count;
+  }
+}
+
+function renderDrawer(){
+  const items = getCartArray();
+  const { subtotal, delivery, total } = getTotals();
+
+  drawerTitle.textContent = groupActive ? `${groupName || "Group"} Cart` : "Your Cart";
+  splitToggle.classList.toggle('hidden', !groupActive);
+
+  if(items.length === 0){
+    cartItemsEl.innerHTML = `<div class="empty-cart">Your cart is empty.<br>Add something tasty! 🍕</div>`;
+    checkoutBtn.disabled = true;
+  } else if(groupActive && splitView === "split"){
+    // ---- SPLIT BY PERSON VIEW ----
+    const breakdown = getMemberTotals();
+    cartItemsEl.innerHTML = breakdown.map(b => `
+      <div class="split-member-block">
+        <div class="split-member-head">
+          <div class="member-avatar" style="background:${b.member.color}22;color:${b.member.color}">${b.member.emoji}</div>
+          <div class="sm-name">${b.member.name}${b.member.isHost ? ' (Host)' : ''}</div>
+          <div class="sm-amt">₹${Math.round(b.total)}</div>
+        </div>
+        ${b.items.map(it => `<div class="split-item-line"><span>${it.name} x${it.qty}</span><span>₹${it.price * it.qty}</span></div>`).join('')}
+        <div class="split-item-line"><span>Delivery share</span><span>₹${Math.round(b.deliveryShare)}</span></div>
+      </div>
+    `).join('');
+    checkoutBtn.disabled = false;
+  } else {
+    // ---- ALL ITEMS VIEW ----
+    cartItemsEl.innerHTML = items.map(it => {
+      const m = groupActive ? getMember(it.memberId) : null;
+      const key = cartKey(it.id, it.memberId);
+      return `
+      <div class="cart-row">
+        <img src="${it.img}" alt="${it.name}">
+        <div class="info">
+          <div class="name">${it.name}</div>
+          <div class="price">₹${it.price} x ${it.qty}</div>
+          ${m ? `<div class="added-by"><span>${m.emoji}</span><span>Added by ${m.name}</span></div>` : ``}
+        </div>
+        <div class="qty-control">
+          <button class="minus" data-key="${key}" data-action="dec">−</button>
+          <span class="qty-num">${it.qty}</span>
+          <button data-key="${key}" data-action="inc">+</button>
+        </div>
+        <button class="remove-btn" data-key="${key}" data-action="remove">Remove</button>
+      </div>
+    `;
+    }).join('');
+    checkoutBtn.disabled = false;
+  }
+  subtotalVal.textContent = `₹${subtotal}`;
+  deliveryVal.textContent = `₹${delivery}`;
+  totalVal.textContent = `₹${total}`;
+}
+
+function updateAll(){
+  renderCuratedSections();
+  renderFoodGrid();
+  renderCartBar();
+  renderDrawer();
+}
+
+/* ======================================================
+   DRAWER / OVERLAY HELPERS
+   ====================================================== */
+function openOverlay(overlayEl){ overlayEl.classList.add('open'); }
+function closeOverlay(overlayEl){ overlayEl.classList.remove('open'); }
+
+function openDrawer(){ drawer.classList.add('open'); openOverlay(drawerOverlay); }
+function closeDrawer(){ drawer.classList.remove('open'); closeOverlay(drawerOverlay); }
+
+/* ======================================================
+   THEME TOGGLE (dark mode)
+   ====================================================== */
+themeToggle.addEventListener('click', () => {
+  const isDark = phoneEl.getAttribute('data-theme') === 'dark';
+  phoneEl.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  themeToggle.textContent = isDark ? '🌙' : '☀️';
+});
+
+/* ======================================================
+   EVENT LISTENERS
+   ====================================================== */
+
+// Search bar — instant filtering
+searchInput.addEventListener('input', (e) => {
+  searchTerm = e.target.value;
+  renderCuratedSections();
+  renderFoodGrid();
+});
+
+// Category pills
+categoryBar.addEventListener('click', (e) => {
+  const btn = e.target.closest('.cat-btn');
+  if(!btn) return;
+  activeCategory = btn.dataset.cat;
+  renderCategories();
+  renderFoodGrid();
+});
+
+// Add to cart + favorite toggle (event delegation on grid)
+foodGrid.addEventListener('click', (e) => {
+  const addBtn = e.target.closest('.add-btn');
+  const favBtn = e.target.closest('.fav-btn');
+  if(addBtn){ addToCart(Number(addBtn.dataset.id)); return; }
+  if(favBtn){
+    const id = Number(favBtn.dataset.id);
+    favorites.has(id) ? favorites.delete(id) : favorites.add(id);
+    renderFoodGrid();
+  }
+});
+
+// Tapping a curated (horizontal) card adds it straight to cart
+curatedSections.addEventListener('click', (e) => {
+  const card = e.target.closest('.h-card');
+  if(!card) return;
+  addToCart(Number(card.dataset.id));
+});
+
+// Open cart via bottom bar or header icon
+cartBar.addEventListener('click', openDrawer);
+cartIconBtn.addEventListener('click', openDrawer);
+
+// Close cart drawer
+closeDrawerBtn.addEventListener('click', closeDrawer);
+drawerOverlay.addEventListener('click', closeDrawer);
+
+// Quantity +/- and remove (event delegation inside drawer)
+cartItemsEl.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  const key = btn.dataset.key;
+  const action = btn.dataset.action;
+  if(action === 'inc') changeQty(key, 1);
+  if(action === 'dec') changeQty(key, -1);
+  if(action === 'remove') removeFromCart(key);
+});
+
+// Split-by-person toggle inside the cart drawer
+splitToggle.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-view]');
+  if(!btn) return;
+  splitView = btn.dataset.view;
+  [...splitToggle.children].forEach(c => c.classList.toggle('active', c === btn));
+  renderDrawer();
+});
+
+/* ======================================================
+   CHECKOUT FLOW
+   1. Checkout button -> opens the order-summary / details form
+   2. Confirm Order -> validates fields, then shows success popup
+   ====================================================== */
+checkoutBtn.addEventListener('click', () => {
+  if(checkoutBtn.disabled) return;
+  const { total } = getTotals();
+  formTotal.textContent = `₹${total}`;
+  closeDrawer();
+  openOverlay(formOverlay);
+});
+
+cancelOrderBtn.addEventListener('click', () => closeOverlay(formOverlay));
+formOverlay.addEventListener('click', (e) => { if(e.target === formOverlay) closeOverlay(formOverlay); });
+
+function validateField(inputEl, fieldWrapId, isValid){
+  const wrap = document.getElementById(fieldWrapId);
+  wrap.classList.toggle('invalid', !isValid);
+  return isValid;
+}
+
+confirmOrderBtn.addEventListener('click', () => {
+  const nameValid    = validateField(custName, 'nameField', custName.value.trim().length > 1);
+  const phoneValid   = validateField(custPhone, 'phoneField', /^\d{10}$/.test(custPhone.value.trim()));
+  const addressValid = validateField(custAddress, 'addressField', custAddress.value.trim().length > 4);
+
+  if(!nameValid || !phoneValid || !addressValid) return;
+
+  if(groupActive){
+    const breakdown = getMemberTotals();
+    popupTitle.textContent = "Group order placed! 🎉";
+    popupSub.textContent = `One payment collected for ${groupMembers.length} member${groupMembers.length > 1 ? 's' : ''}. Here's how it splits:`;
+    popupSplitBreakdown.innerHTML = `
+      <div style="text-align:left; margin-bottom:18px;">
+        ${breakdown.map(b => `
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:7px 0; border-bottom:1px solid var(--border); font-size:12.5px;">
+            <span style="display:flex; align-items:center; gap:6px;"><span>${b.member.emoji}</span>${b.member.name}${b.member.isHost ? ' (Host)' : ''}</span>
+            <span style="font-weight:700; color:var(--chili)">₹${Math.round(b.total)}</span>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } else {
+    popupTitle.textContent = "Order placed successfully!";
+    popupSub.textContent = "Thank you for ordering.";
+    popupSplitBreakdown.innerHTML = "";
+  }
+
+  closeOverlay(formOverlay);
+  openOverlay(popupOverlay);
+});
+
+popupCloseBtn.addEventListener('click', () => {
+  closeOverlay(popupOverlay);
+  cart = {};                       // empty the cart after order is placed
+  custName.value = "";
+  custPhone.value = "";
+  custAddress.value = "";
+  if(groupActive) endGroup(false); // the single payment wraps up the group session
+  updateAll();
+});
+
+/* ======================================================
+   NEARBY SHOPS — Chennai map + shop list with ratings
+   (Uses OpenStreetMap's public embed, which needs no API key and
+   loads reliably. Pin positions on top of the map are decorative —
+   scattered around the visible area for a "shops near you" feel
+   rather than tied to exact geocoding.)
+   ====================================================== */
+const SHOPS = [
+  { name:"Saravana Bhavan",     cuisine:"South Indian · Veg",     rating:4.5, distance:"0.4 km", top:"28%", left:"62%" },
+  { name:"Cafe Coffee Day",     cuisine:"Coffee · Beverages",     rating:4.0, distance:"0.6 km", top:"70%", left:"22%" },
+  { name:"Pizza Corner",        cuisine:"Pizza · Fast Food",      rating:4.2, distance:"0.7 km", top:"55%", left:"78%" },
+  { name:"Biryani Zone",        cuisine:"Biryani · North Indian", rating:4.6, distance:"0.9 km", top:"18%", left:"20%" },
+  { name:"Sweet Chariot Bakery",cuisine:"Desserts · Bakery",      rating:4.3, distance:"1.1 km", top:"80%", left:"60%" },
+  { name:"Chinese Wok House",   cuisine:"Chinese · Noodles",      rating:4.1, distance:"1.3 km", top:"40%", left:"40%" },
+];
+// A bounding box around T. Nagar, Chennai — a real, working OpenStreetMap
+// embed, just used here as a visual backdrop rather than a precise lookup.
+const CHENNAI_MAP_EMBED = "https://www.openstreetmap.org/export/embed.html?bbox=80.2230%2C13.0330%2C80.2450%2C13.0500&layer=mapnik&marker=13.0418%2C80.2341";
+
+function renderShopsCard(){
+  const stars = (r) => "⭐".repeat(Math.round(r));
+  shopsCardContent.innerHTML = `
+    <h3>Shops Near You</h3>
+    <p class="sub">Restaurants and cafés around you in Chennai.</p>
+    <div class="shops-map-wrap">
+      <iframe src="${CHENNAI_MAP_EMBED}" loading="lazy" title="Chennai map"></iframe>
+      <div class="map-pin you" style="top:50%; left:50%;"><span>●</span></div>
+      ${SHOPS.map((s, i) => `<div class="map-pin" style="top:${s.top}; left:${s.left};"><span>${i + 1}</span></div>`).join('')}
+      <div class="shops-map-badge">📍 You are here</div>
+    </div>
+    ${SHOPS.map((s, i) => `
+      <div class="shop-row">
+        <div class="shop-pin">${i + 1}</div>
+        <div class="sr-info">
+          <div class="sr-name">${s.name}</div>
+          <div class="sr-meta">${s.cuisine} · ${s.distance} away</div>
+        </div>
+        <div class="sr-rating">${s.rating} ${stars(s.rating)}</div>
+      </div>
+    `).join('')}
+  `;
+}
+
+shopsIconBtn.addEventListener('click', () => {
+  renderShopsCard();
+  openOverlay(shopsOverlay);
+});
+shopsOverlay.addEventListener('click', (e) => { if(e.target === shopsOverlay) closeOverlay(shopsOverlay); });
+
+/* ======================================================
+   SPECIAL OFFERS — auto-scrolling carousel
+   ====================================================== */
+const OFFERS = [
+  { badge:"🎉", title:"50% OFF", sub:"On your first order · code WELCOME50",
+    img:"https://images.unsplash.com/photo-1628840042765-356cda07504e?w=420&h=240&fit=crop&auto=format&q=70" },
+  { badge:"🚚", title:"Free Delivery", sub:"On all orders above ₹299",
+    img:"https://images.unsplash.com/photo-1559528896-c5310744cce8?w=420&h=240&fit=crop&auto=format&q=70" },
+  { badge:"🍕", title:"Buy 1 Get 1", sub:"On all Pizzas · today only",
+    img:"https://images.unsplash.com/photo-1534308983496-4fabb1a015ee?w=420&h=240&fit=crop&auto=format&q=70" },
+  { badge:"🍛", title:"Flat ₹100 OFF", sub:"On Biryani orders above ₹399",
+    img:"https://images.unsplash.com/photo-1631515243349-e0cb75fb8d3a?w=420&h=240&fit=crop&auto=format&q=70" },
+  { badge:"👨‍👩‍👧‍👦", title:"Group Order Bonus", sub:"5% cashback when you split the bill",
+    img:"https://images.unsplash.com/photo-1572802419224-296b0aeee0d9?w=420&h=240&fit=crop&auto=format&q=70" },
+  { badge:"🍰", title:"Sweet Deal", sub:"20% OFF on all desserts",
+    img:"https://images.unsplash.com/photo-1636743715220-d8f8dd900b87?w=420&h=240&fit=crop&auto=format&q=70" },
+  { badge:"⚡", title:"Lightning Combo", sub:"Burger + Fries + Drink at ₹199",
+    img:"https://images.unsplash.com/photo-1550547660-d9450f859349?w=420&h=240&fit=crop&auto=format&q=70" },
+];
+function renderOffers(){
+  const card = (o) => `
+    <div class="offer-card" style="background-image: url('${o.img}');">
+      <div class="oc-badge">${o.badge}</div>
+      <div class="oc-text">
+        <div class="oc-title">${o.title}</div>
+        <div class="oc-sub">${o.sub}</div>
+      </div>
+    </div>`;
+  // Render the list twice back-to-back so the CSS animation (which slides
+  // exactly -50%) loops seamlessly with no visible jump or gap.
+  offersTrack.innerHTML = OFFERS.map(card).join('') + OFFERS.map(card).join('');
+}
+
+/* ======================================================
+   GROUP ORDERING 👨‍👩‍👧‍👦
+   Create group -> Invite friends -> Everyone adds items ->
+   Split bill automatically -> One payment.
+   (Runs entirely client-side: "friends" are simulated so the
+   whole flow can be demoed from a single device.)
+   ====================================================== */
+let toastTimer = null;
+function showToast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2600);
+}
+
+function renderGroupBanner(){
+  if(!groupActive){
+    groupBanner.classList.add('hidden');
+    groupMemberCountEl.style.display = 'none';
+    return;
+  }
+  groupBanner.classList.remove('hidden');
+  groupMemberCountEl.style.display = 'flex';
+  groupMemberCountEl.textContent = groupMembers.length;
+  bannerTitle.textContent = groupName;
+  bannerSub.textContent = `${groupMembers.length} member${groupMembers.length > 1 ? 's' : ''} ordering together · tap to manage`;
+  bannerAvatars.innerHTML = groupMembers.slice(0, 4).map(m =>
+    `<div class="avatar-chip" style="background:${m.color}">${m.emoji}</div>`
+  ).join('') + (groupMembers.length > 4 ? `<div class="avatar-chip" style="background:var(--shell);color:#fff;font-size:10px;">+${groupMembers.length - 4}</div>` : '');
+}
+
+function renderOrdererBar(){
+  if(!groupActive){
+    ordererBar.classList.add('hidden');
+    ordererBar.innerHTML = '';
+    return;
+  }
+  ordererBar.classList.remove('hidden');
+  ordererBar.innerHTML = `<span class="oa-label">Ordering as:</span>` + groupMembers.map(m => `
+    <div class="orderer-chip ${m.id === currentOrderer ? 'active' : ''}" data-member="${m.id}">
+      <span class="dot" style="background:${m.color}22;color:${m.color}">${m.emoji}</span>${m.name}
+    </div>
+  `).join('');
+}
+
+function renderGroupCardContent(){
+  if(!groupActive){
+    groupCardContent.innerHTML = `
+      <div class="group-emoji-hero">👨‍👩‍👧‍👦</div>
+      <h3 style="text-align:center">Start a Group Order</h3>
+      <p class="sub" style="text-align:center">Order together on one shared link — everyone adds their own food and the bill splits automatically. Just one payment at the end.</p>
+      <input class="group-name-input" id="groupNameInput" placeholder="Name your group e.g. Friday Night Squad" maxlength="30">
+      <button class="btn-primary" style="width:100%" data-action="create-group">Create Group</button>
+    `;
+    return;
+  }
+  const breakdown = getMemberTotals();
+  groupCardContent.innerHTML = `
+    <div class="group-emoji-hero">🎉</div>
+    <h3 style="text-align:center">${groupName}</h3>
+    <p class="sub" style="text-align:center">Share this link so friends can join and add their own items.</p>
+    <div class="link-row">
+      <div class="link-text">yumbox.app/group/${groupCode}</div>
+      <button class="copy-btn" data-action="copy-link">Copy</button>
+    </div>
+    <div class="members-list">
+      <div class="ml-title">Members (${groupMembers.length})</div>
+      ${groupMembers.map(m => {
+        const b = breakdown.find(x => x.member.id === m.id);
+        const amt = b ? Math.round(b.itemsTotal) : 0;
+        return `<div class="member-row">
+          <div class="member-avatar" style="background:${m.color}22;color:${m.color}">${m.emoji}</div>
+          <div class="m-name">${m.name}</div>
+          ${m.isHost ? '<span class="m-host">HOST</span>' : ''}
+          <div class="m-total">₹${amt}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="add-friend-btn" data-action="add-friend">+ Simulate a friend joining</button>
+    <button class="btn-primary" style="width:100%; margin-bottom:8px;" data-action="close-group-overlay">Back to Menu</button>
+    <button class="end-group-btn" data-action="end-group">End group order</button>
+  `;
+}
+
+function openGroupOverlay(){
+  renderGroupCardContent();
+  openOverlay(groupOverlay);
+}
+
+function createGroup(name){
+  groupActive = true;
+  groupName = name || "Our Group Order";
+  groupCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+  groupMembers = [{ id:'you', name:'You', emoji:'🧑', isHost:true, color: MEMBER_COLORS[0] }];
+  currentOrderer = 'you';
+  splitView = 'items';
+  renderGroupCardContent();
+  renderGroupBanner();
+  renderOrdererBar();
+  renderFoodGrid();
+  showToast('🎉 Group order started! Invite your friends.');
+}
+
+function addFriendToGroup(){
+  const existingNames = groupMembers.map(m => m.name);
+  const pool = MOCK_FRIENDS.filter(f => !existingNames.includes(f.name));
+  if(pool.length === 0){ showToast("Everyone's already in! 🎊"); return; }
+  const friend = pool[0];
+  const member = {
+    id: friend.name.toLowerCase(), name: friend.name, emoji: friend.emoji,
+    isHost: false, color: MEMBER_COLORS[groupMembers.length % MEMBER_COLORS.length]
+  };
+  groupMembers.push(member);
+  renderGroupCardContent();
+  renderGroupBanner();
+  renderOrdererBar();
+  showToast(`${friend.emoji} ${friend.name} joined the group!`);
+  startGroupAutoActivity();
+}
+
+/* Friends "adding their own items" — simulated so the whole
+   collaborative flow is visible without needing multiple devices. */
+function startGroupAutoActivity(){
+  if(groupTimer) return;
+  groupTimer = setInterval(() => {
+    if(!groupActive){ clearInterval(groupTimer); groupTimer = null; return; }
+    const friends = groupMembers.filter(m => !m.isHost);
+    if(friends.length === 0) return;
+    const friend = friends[Math.floor(Math.random() * friends.length)];
+    const item = FOOD_ITEMS[Math.floor(Math.random() * FOOD_ITEMS.length)];
+    addToCart(item.id, friend.id);
+    showToast(`${friend.emoji} ${friend.name} added ${item.name}`);
+    if(groupOverlay.classList.contains('open')) renderGroupCardContent();
+  }, 6000);
+}
+
+function copyGroupLink(btn){
+  const link = `https://yumbox.app/group/${groupCode}`;
+  const done = () => {
+    const original = btn.textContent;
+    btn.textContent = "Copied!";
+    btn.classList.add('copied');
+    showToast("🔗 Link copied — share it with friends!");
+    setTimeout(() => { btn.textContent = original === "Copied!" ? "Copy" : original; btn.classList.remove('copied'); }, 1800);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(done).catch(done);
+  } else {
+    done();
+  }
+}
+
+function endGroup(manual){
+  if(manual){
+    // Friends' items leave with them; your own selections stay in your cart.
+    Object.keys(cart).forEach(k => { if(cart[k].memberId !== 'you') delete cart[k]; });
+  }
+  groupActive = false;
+  groupMembers = [];
+  groupName = "";
+  groupCode = "";
+  currentOrderer = "you";
+  splitView = "items";
+  if(groupTimer){ clearInterval(groupTimer); groupTimer = null; }
+  renderGroupBanner();
+  renderOrdererBar();
+  closeOverlay(groupOverlay);
+  updateAll();
+  if(manual) showToast("Group order ended");
+}
+
+/* ---- group overlay event delegation ---- */
+groupIconBtn.addEventListener('click', openGroupOverlay);
+groupBanner.addEventListener('click', openGroupOverlay);
+groupOverlay.addEventListener('click', (e) => { if(e.target === groupOverlay) closeOverlay(groupOverlay); });
+
+groupCardContent.addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-action]');
+  if(!btn) return;
+  const action = btn.dataset.action;
+  if(action === 'create-group'){
+    const nameInput = document.getElementById('groupNameInput');
+    createGroup(nameInput.value.trim());
+  }
+  if(action === 'copy-link') copyGroupLink(btn);
+  if(action === 'add-friend') addFriendToGroup();
+  if(action === 'end-group') endGroup(true);
+  if(action === 'close-group-overlay') closeOverlay(groupOverlay);
+});
+
+// "Ordering as" member switcher
+ordererBar.addEventListener('click', (e) => {
+  const chip = e.target.closest('.orderer-chip');
+  if(!chip) return;
+  currentOrderer = chip.dataset.member;
+  renderOrdererBar();
+  renderFoodGrid();
+});
+
+/* ======================================================
+   INITIAL RENDER
+   ====================================================== */
+renderCategories();
+renderOffers();
+renderGroupBanner();
+renderOrdererBar();
+updateAll();
+</script>
+
+</body>
+</html>
